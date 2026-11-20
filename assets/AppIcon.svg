@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Edo — connected recording icon</title>
+  <desc id="desc">Custom lowercase ed lettering, with the d flowing into a coral-red circular o.</desc>
+  <defs>
+    <linearGradient id="navy" x1="0" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#293f6b"/>
+      <stop offset="0.52" stop-color="#172746"/>
+      <stop offset="1" stop-color="#0b1429"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.25" cy="0.1" r="0.85">
+      <stop offset="0" stop-color="#7da9fa" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#7da9fa" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="letter" x1="0" y1="0" x2="0.7" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#edf4ff"/>
+    </linearGradient>
+    <linearGradient id="link" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#edf4ff"/>
+      <stop offset="0.56" stop-color="#ff766b"/>
+      <stop offset="1" stop-color="#ff493f"/>
+    </linearGradient>
+    <linearGradient id="record" x1="0" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#ff7966"/>
+      <stop offset="1" stop-color="#f73639"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feGaussianBlur stdDeviation="22"/>
+    </filter>
+  </defs>
+  <!-- Scaled into the 824 pt rounded square of the macOS icon grid. -->
+  <g transform="translate(512 512) scale(0.8512) translate(-512 -512)">
+  <rect x="28" y="28" width="968" height="968" rx="215" fill="url(#navy)"/>
+  <rect x="28" y="28" width="968" height="968" rx="215" fill="url(#glow)"/>
+  <!-- Soft shadow beneath monogram -->
+  <g fill="none" stroke="#050b18" stroke-width="68" stroke-linecap="round" stroke-linejoin="round" opacity="0.22" filter="url(#shadow)" transform="translate(0 14)">
+    <path d="M351 638 C330 664 302 681 271 677 C216 671 193 625 194 570 C195 516 229 477 281 477 C326 477 351 510 351 551 C351 565 342 570 327 570 H202" />
+    <path d="M577 566 C577 507 544 474 494 474 C442 474 406 513 406 569 C406 631 440 673 494 673 C545 673 579 629 579 573" />
+    <path d="M579 332 V660" />
+    <path d="M578 614 C613 637 634 644 662 626" />
+    <path d="M661 572 C661 516 697 475 746 475 C799 475 834 516 834 575 C834 632 797 673 745 673 C695 673 661 629 661 572 Z" />
+  </g>
+  <!-- Lowercase e -->
+  <path d="M351 638 C330 664 302 681 271 677 C216 671 193 625 194 570 C195 516 229 477 281 477 C326 477 351 510 351 551 C351 565 342 570 327 570 H202" fill="none" stroke="url(#letter)" stroke-width="61" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Lowercase d: open bowl plus ascender -->
+  <path d="M577 566 C577 507 544 474 494 474 C442 474 406 513 406 569 C406 631 440 673 494 673 C545 673 579 629 579 573" fill="none" stroke="url(#letter)" stroke-width="61" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M579 332 V660" fill="none" stroke="#f4f7ff" stroke-width="61" stroke-linecap="round" />
+  <!-- One continuous stroke exits the bowl of the d into the o -->
+  <path d="M580 614 C615 641 633 644 664 627" fill="none" stroke="url(#link)" stroke-width="61" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Recording-red o is not a separate dot; it completes the lettering -->
+  <path d="M661 572 C661 516 697 475 746 475 C799 475 834 516 834 575 C834 632 797 673 745 673 C695 673 661 629 661 572 Z" fill="none" stroke="url(#record)" stroke-width="61" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+</svg>
