@@ -35,10 +35,14 @@ final class SpeechDetectorTests: XCTestCase {
 
     func testQuietAtStartAndEndHasNoMarginAtFileEdges() {
         XCTAssertEqual(plan([(quiet, 1.5), (loud, 1), (quiet, 1.5)]).segments, [
-            Segment(start: 0, end: 1.3, speed: 1.2, note: "quiet"),
+            Segment(start: 0, end: 1.3, speed: 0, note: "quiet"),
             Segment(start: 1.3, end: 2.7, speed: 1, note: "speech"),
-            Segment(start: 2.7, end: 4, speed: 1.2, note: "quiet"),
+            Segment(start: 2.7, end: 4, speed: 0, note: "quiet"),
         ])
+    }
+
+    func testEntirelyQuietRecordingStaysPlayable() {
+        XCTAssertEqual(plan([(quiet, 3)]).segments, [Segment(start: 0, end: 3, speed: 1.2, note: "quiet")])
     }
 
     func testClickInsideAPauseIsIgnored() {
@@ -68,7 +72,7 @@ final class SpeechDetectorTests: XCTestCase {
         let segments = plan([(loud, 1), (quiet, 0.1), (loud, 0.3), (quiet, 1.6)], words: words).segments
         XCTAssertEqual(segments, [
             Segment(start: 0, end: 1.6, speed: 1, note: "too."),
-            Segment(start: 1.6, end: 3, speed: 1.2, note: "quiet"),
+            Segment(start: 1.6, end: 3, speed: 0, note: "quiet"),
         ])
     }
 

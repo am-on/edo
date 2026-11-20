@@ -203,7 +203,7 @@ final class Recorder {
         let panel = RecordingPanel(content: RecordingControls().environment(self))
         let size = panel.frame.size
         let visible = screen.visibleFrame
-        panel.setFrameOrigin(CGPoint(x: visible.maxX - size.width - 16, y: visible.maxY - size.height - 16))
+        panel.setFrameOrigin(CGPoint(x: visible.midX - size.width / 2, y: visible.minY + 4))
         panel.orderFrontRegardless()
         self.panel = panel
     }
@@ -278,19 +278,17 @@ struct RecordingControls: View {
                 }
             }
             .frame(width: 64, alignment: .leading)
-            VStack(alignment: .leading, spacing: 4) {
-                LevelBar(level: recorder.mic.level)
-                    .frame(width: 120)
-                Button {
-                    recorder.mic.showModes()
-                } label: {
-                    Text(recorder.mic.activeMode.label)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .help("Change the mic mode")
+            LevelBar(level: recorder.mic.level)
+                .frame(width: 80)
+            Button {
+                recorder.mic.showModes()
+            } label: {
+                Text(recorder.mic.activeMode.label)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
+            .buttonStyle(.plain)
+            .help("Change the mic mode")
             Button {
                 Task { await recorder.stop() }
             } label: {
@@ -301,7 +299,7 @@ struct RecordingControls: View {
             .disabled(!recorder.isRecording)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.vertical, 3)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
         .fixedSize()
     }

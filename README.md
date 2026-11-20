@@ -81,7 +81,7 @@ segment there. Drag a boundary between two segments to trim them.
    6 dB below it. Loud bursts under 0.15 s, like clicks, are ignored.
 4. macOS transcribes the audio on the device. A loud stretch counts as talking only when
    a word starts in it, and each speech segment's note is what you said there.
-5. Only pauses of 1 s or longer are sped up.
+5. By default, Edo cuts detected pauses at the start and end and speeds up pauses between speech. The minimum pause is 1 s. A wholly quiet video stays playable.
 
 **Detect** runs this again with your choice of words on or off, a fixed quiet level,
 the pause length and the quiet-part speed. Opening a video with a plan file keeps

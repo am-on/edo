@@ -47,7 +47,9 @@ enum SpeechDetector {
             let quietEnd = run.upperBound >= mask.count ? duration : Plan.round(end - settings.margin)
             guard quietEnd - quietStart > settings.minQuiet else { continue }
             addSpeech(until: quietStart)
-            segments.append(Segment(start: max(quietStart, cursor), end: quietEnd, speed: settings.quietSpeed, note: "quiet"))
+            // Keep a wholly quiet recording playable. Trim edge pauses when speech is present.
+            let trim = (run.lowerBound == 0) != (run.upperBound == mask.count)
+            segments.append(Segment(start: max(quietStart, cursor), end: quietEnd, speed: trim ? 0 : settings.quietSpeed, note: "quiet"))
             cursor = quietEnd
         }
         addSpeech(until: duration)
