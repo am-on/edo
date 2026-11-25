@@ -52,22 +52,7 @@ final class RecordingWriterTests: XCTestCase {
     func testWritesScreenAndVoiceIntoOneMovie() async throws {
         let url = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).mov")
         defer { try? FileManager.default.removeItem(at: url) }
-        let writer = try RecordingWriter(url: url, width: 320, height: 200, sampleRate: 48_000)
-
-        // Two seconds of 30 fps frames and a 440 Hz tone, stamped on the host clock like the real sources.
-        let start = mach_absolute_time()
-        let ticksPerSecond = AVAudioTime.hostTime(forSeconds: 1)
-        for frame in 0..<60 {
-            let hostTime = start + UInt64(Double(frame) / 30 * Double(ticksPerSecond))
-            let buffer = try makeFrame(width: 320, height: 200, at: CMClockMakeHostTimeFromSystemUnits(hostTime))
-            writer.queue.sync { writer.appendVideo(buffer) }
-            if frame % 3 == 0 {
-                let first = frame / 3 * 4_800
-                let tone = (first..<first + 4_800).map { Float(sin(2 * Double.pi * 440 * Double($0) / 48_000)) * 0.3 }
-                writer.appendAudio(tone, hostTime: hostTime)
-            }
-        }
-        try await writer.finish()
+        try await writeTwoSecondMovie(to: url)
 
         let asset = AVURLAsset(url: url)
         let videoTracks = try await asset.loadTracks(withMediaType: .video)
@@ -92,6 +77,53 @@ final class RecordingWriterTests: XCTestCase {
             try await writer.finish()
             XCTFail("Expected an error")
         } catch RecordingWriter.Failure.noFrames {}
+    }
+
+    func testExportOfCutsAndSpeedPlaysAsOneContinuousRun() async throws {
+        let source = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).mov")
+        let output = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).mov")
+        defer {
+            try? FileManager.default.removeItem(at: source)
+            try? FileManager.default.removeItem(at: output)
+        }
+        try await writeTwoSecondMovie(to: source)
+        let plan = Plan(segments: [
+            Segment(start: 0, end: 0.5, speed: 1),
+            Segment(start: 0.5, end: 1, speed: 0),
+            Segment(start: 1, end: 2, speed: 2),
+        ])
+
+        try await EditComposer.render(asset: AVURLAsset(url: source), plan: plan, duration: 2, to: output)
+
+        // Browsers stop at the first cut when a track has more than one edit, so each track has one.
+        let asset = AVURLAsset(url: output)
+        let duration = try await asset.load(.duration).seconds
+        XCTAssertEqual(duration, 1, accuracy: 0.05)
+        for type in [AVMediaType.video, .audio] {
+            let tracks = try await asset.loadTracks(withMediaType: type)
+            let track = try XCTUnwrap(tracks.first)
+            let segments = try await track.load(.segments).filter { !$0.isEmpty }
+            XCTAssertEqual(segments.count, 1, "\(type.rawValue) track")
+            XCTAssertEqual(segments.first?.timeMapping.target.duration.seconds ?? 0, 1, accuracy: 0.05)
+        }
+    }
+
+    /// Two seconds of 30 fps frames and a 440 Hz tone, stamped on the host clock like the real sources.
+    private func writeTwoSecondMovie(to url: URL) async throws {
+        let writer = try RecordingWriter(url: url, width: 320, height: 200, sampleRate: 48_000)
+        let start = mach_absolute_time()
+        let ticksPerSecond = AVAudioTime.hostTime(forSeconds: 1)
+        for frame in 0..<60 {
+            let hostTime = start + UInt64(Double(frame) / 30 * Double(ticksPerSecond))
+            let buffer = try makeFrame(width: 320, height: 200, at: CMClockMakeHostTimeFromSystemUnits(hostTime))
+            writer.queue.sync { writer.appendVideo(buffer) }
+            if frame % 3 == 0 {
+                let first = frame / 3 * 4_800
+                let tone = (first..<first + 4_800).map { Float(sin(2 * Double.pi * 440 * Double($0) / 48_000)) * 0.3 }
+                writer.appendAudio(tone, hostTime: hostTime)
+            }
+        }
+        try await writer.finish()
     }
 
     private func makeFrame(width: Int, height: Int, at time: CMTime) throws -> CMSampleBuffer {
