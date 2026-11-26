@@ -20,12 +20,16 @@ final class Recorder {
     /// Set when the last attempt to record failed; shown in the setup sheet.
     private(set) var startError: String?
     let mic: MicMonitor
+    let script = ScriptPrompter()
 
     @ObservationIgnored private let store: EditorStore
     @ObservationIgnored private var picker: AreaPicker?
     @ObservationIgnored private var stream: SCStream?
     @ObservationIgnored private var writer: RecordingWriter?
     @ObservationIgnored private var watcher: StreamWatcher?
+    @ObservationIgnored private var area: CaptureArea?
+    /// Set when Start Over couldn't save the take before; shown once the recording opens.
+    @ObservationIgnored private var lostTake = false
     @ObservationIgnored private var panel: NSPanel?
     @ObservationIgnored private var frame: NSWindow?
     @ObservationIgnored private weak var mainWindow: NSWindow?
@@ -45,6 +49,7 @@ final class Recorder {
         guard phase == .idle else { return }
         hasScreenAccess = CGPreflightScreenCaptureAccess()
         startError = nil
+        lostTake = false
         showsSetup = true
         Task { await mic.start() }
     }
@@ -68,14 +73,16 @@ final class Recorder {
         phase = .choosingArea
         mainWindow = NSApp.windows.first { $0.isVisible && $0.canBecomeMain }
         mainWindow?.orderOut(nil)
-        let picker = AreaPicker(initial: CaptureArea.last) { [weak self] area in
+        let picker = AreaPicker(initial: CaptureArea.last, script: script) { [weak self] area in
             guard let self else { return }
             self.picker = nil
             if let area {
+                self.script.startRecording()
                 self.phase = .starting
                 self.showRecordingWindows(for: area)
                 Task { await self.start(area) }
             } else {
+                self.script.close()
                 self.phase = .idle
                 self.mic.stop()
                 self.showMainWindow()
@@ -122,6 +129,7 @@ final class Recorder {
             self.writer = writer
             self.stream = stream
             self.watcher = watcher
+            self.area = area
             phase = .recording(since: .now)
         } catch {
             FileHandle.standardError.write(Data("edo: recording didn't start: \(error)\n".utf8))
@@ -140,18 +148,17 @@ final class Recorder {
     func stop() async {
         guard isRecording, let writer else { return }
         phase = .saving
-        try? await stream?.stopCapture()
-        stream = nil
-        watcher = nil
-        mic.sink.set(nil)
+        await endCapture()
         mic.stop()
-        self.writer = nil
         do {
             try await writer.finish()
             phase = .idle
             showMainWindow()
             hideRecordingWindows()
             await store.open(writer.url)
+            if lostTake {
+                store.errorMessage = "An earlier take couldn't be saved. Check there's free disk space."
+            }
         } catch {
             FileHandle.standardError.write(Data("edo: recording wasn't saved: \(error)\n".utf8))
             try? FileManager.default.removeItem(at: writer.url)
@@ -160,6 +167,31 @@ final class Recorder {
             hideRecordingWindows()
             store.errorMessage = "The recording couldn't be saved. Check there's free disk space and record again."
         }
+    }
+
+    /// Saves the take so far on the Desktop and starts a new recording of the same area.
+    func startOver() async {
+        guard isRecording, let writer, let area else { return }
+        phase = .starting
+        await endCapture()
+        do {
+            try await writer.finish()
+        } catch {
+            FileHandle.standardError.write(Data("edo: the previous take wasn't saved: \(error)\n".utf8))
+            try? FileManager.default.removeItem(at: writer.url)
+            lostTake = true
+        }
+        await start(area)
+    }
+
+    /// Stops the screen capture and the audio going into the movie; the mic keeps running.
+    private func endCapture() async {
+        try? await stream?.stopCapture()
+        stream = nil
+        watcher = nil
+        mic.sink.set(nil)
+        writer = nil
+        area = nil
     }
 
     /// A recorder fixed in one state, for snapshots.
@@ -187,6 +219,7 @@ final class Recorder {
     private func hideRecordingWindows() {
         panel?.orderOut(nil)
         frame?.orderOut(nil)
+        script.close()
         panel = nil
         frame = nil
     }
@@ -206,6 +239,7 @@ final class Recorder {
         panel.setFrameOrigin(CGPoint(x: visible.midX - size.width / 2, y: visible.minY + 4))
         panel.orderFrontRegardless()
         self.panel = panel
+
     }
 }
 
@@ -263,12 +297,21 @@ private final class AreaFrameWindow: NSWindow {
     }
 }
 
-/// Timer, live mic level, mic mode and Stop, shown while recording.
+/// Start Over, timer, live mic level, mic mode and Stop, shown while recording.
 struct RecordingControls: View {
     @Environment(Recorder.self) private var recorder
 
     var body: some View {
         HStack(spacing: 12) {
+            // Start Over sits at the far end from Stop, so neither is clicked by mistake.
+            Button {
+                Task { await recorder.startOver() }
+            } label: {
+                Label("Start Over", systemImage: "arrow.counterclockwise")
+            }
+            .help("Save this take and start a new recording")
+            .disabled(!recorder.isRecording)
+            Divider().frame(height: 16)
             Circle().fill(.red).frame(width: 10, height: 10)
             Group {
                 switch recorder.phase {

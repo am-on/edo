@@ -47,10 +47,17 @@ dims the screens: drag the area to record, drag inside it to move it, drag an ed
 or a corner to resize it, or pick **Whole Screen**, then press Return. The last
 area is remembered.
 
+**Script** in the same toolbar shows a panel to paste what you want to say. Drag its top
+to move it and its edges to resize it. The text grows to fill the panel, up to a limit,
+and gets smaller when the script is long. It stays on
+screen while you record but isn't in the video. Edo remembers the script, where you put
+it and whether it's on.
+
 While recording, a small panel shows the time, the mic level and mode, and **Stop**.
 A dashed red line marks the recorded area. Edo's own windows stay out of the video.
 Stop saves `Screen Recording <date> at <time>.mov` on the Desktop and opens it here
-with the speech already found.
+with the speech already found. **Start Over**, at the other end of the panel, saves
+the take so far on the Desktop and starts a new recording of the same area.
 
 ## Editing
 

@@ -111,6 +111,12 @@ extension Snapshot {
     private static func saveRecording(into folder: URL, store: EditorStore) {
         func path(_ name: String) -> String { folder.appending(path: "\(name).png").path }
         let talking = MicMonitor.preview(.running, level: -22)
+        let script = """
+            Today we harden login and password reset.
+            1. Email codes only work for the account they were sent to.
+            2. Too many wrong codes block sign-in for a while.
+            3. Changing your password asks for the current one.
+            """
         let sheets: [(String, Recorder)] = [
             ("setup", .preview(store: store, mic: talking)),
             ("setup-mic-denied", .preview(store: store, mic: .preview(.denied))),
@@ -127,10 +133,27 @@ extension Snapshot {
         save(RecordingControls().environment(Recorder.preview(store: store, mic: .preview(.running, level: -3), phase: .recording(since: .now - 125))).padding(20),
              to: path("panel-loud"))
         save(RecordingControls().environment(Recorder.preview(store: store, mic: talking, phase: .saving)).padding(20), to: path("panel-saving"))
+        save(RecordingControls().environment(Recorder.preview(store: store, mic: talking, phase: .starting)).padding(20), to: path("panel-starting"))
 
         guard let screen = NSScreen.main, let id = screen.displayID else { return }
-        let picker = AreaPicker(initial: nil) { _ in }
+        let picker = AreaPicker(initial: nil, script: ScriptPrompter(previewText: "", shown: false)) { _ in }
         save(AreaToolbar(picker: picker, screen: screen).padding(20), to: path("toolbar-empty"))
+        let withScript = AreaPicker(initial: nil, script: ScriptPrompter(previewText: script, shown: true)) { _ in }
+        save(AreaToolbar(picker: withScript, screen: screen).padding(20), to: path("toolbar-script"))
+        func saveScript(_ text: String, editing: Bool, to name: String, size: CGSize = CGSize(width: 560, height: 220)) {
+            save(ScriptPanelView(prompter: ScriptPrompter(previewText: text, shown: true, editing: editing))
+                    .frame(width: size.width, height: size.height)
+                    .background(Color(nsColor: .windowBackgroundColor).opacity(0.25), in: RoundedRectangle(cornerRadius: 16))
+                    .background(LinearGradient(colors: [.blue, .orange], startPoint: .leading, endPoint: .trailing))
+                    .padding(20),
+                 to: path(name))
+        }
+        saveScript("", editing: true, to: "script-empty")
+        saveScript(script, editing: true, to: "script-editing")
+        saveScript(script, editing: false, to: "script-recording")
+        saveScript(Array(repeating: script, count: 3).joined(separator: "\n\n"), editing: false, to: "script-recording-long")
+        saveScript("Show the login page first.", editing: false, to: "script-recording-short")
+        saveScript(script, editing: false, to: "script-recording-narrow", size: CGSize(width: 300, height: 260))
         let size = screen.frame.size
         picker.select(CaptureArea(displayID: id, rect: CGRect(x: size.width * 0.2, y: size.height * 0.15,
                                                                 width: size.width * 0.55, height: size.height * 0.6),
@@ -146,7 +169,7 @@ extension Snapshot {
 
 extension Snapshot {
     /// EDO_RECORD_TEST=3 records the whole main screen for that many seconds, printing each step,
-    /// then stops and opens the recording, which checks recording without anyone clicking.
+    /// starts over halfway through, then stops and opens the recording, which checks recording without anyone clicking.
     @MainActor
     static func recordTestIfRequested(_ recorder: Recorder) async {
         guard let seconds = environment["EDO_RECORD_TEST"].flatMap(Double.init), let screen = NSScreen.main else { return }
@@ -159,7 +182,11 @@ extension Snapshot {
         recorder.chooseArea()
         try? await Task.sleep(for: .seconds(1))
         recorder.confirmWholeScreen(screen)
-        for _ in 0..<Int(seconds * 2) {
+        for step in 0..<Int(seconds * 2) {
+            if step == Int(seconds) {
+                say("starting over")
+                await recorder.startOver()
+            }
             try? await Task.sleep(for: .milliseconds(500))
             say("\(recorder.phase), mic level \(recorder.mic.level) dB")
         }

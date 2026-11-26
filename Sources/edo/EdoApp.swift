@@ -52,6 +52,8 @@ struct EditorCommands: Commands {
                 .disabled(recorder.phase != .idle)
             Button("Stop Recording") { Task { await recorder.stop() } }
                 .disabled(!recorder.isRecording)
+            Button("Start Over") { Task { await recorder.startOver() } }
+                .disabled(!recorder.isRecording)
             Button("Back to Video List") { store.closeVideo() }
                 .disabled(!store.hasVideo)
         }

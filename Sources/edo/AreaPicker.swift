@@ -8,12 +8,14 @@ import SwiftUI
 @Observable
 final class AreaPicker {
     private(set) var area: CaptureArea?
+    let script: ScriptPrompter
     @ObservationIgnored private var overlays: [OverlayWindow] = []
     @ObservationIgnored private let onDone: (CaptureArea?) -> Void
 
     /// `onDone` must show its next window before returning: the overlays close right after it,
     /// and macOS quits Edo when none of its windows are left on screen.
-    init(initial: CaptureArea?, onDone: @escaping (CaptureArea?) -> Void) {
+    init(initial: CaptureArea?, script: ScriptPrompter, onDone: @escaping (CaptureArea?) -> Void) {
+        self.script = script
         self.onDone = onDone
         let displays = NSScreen.screens.compactMap(\.displayID)
         area = initial.flatMap { displays.contains($0.displayID) ? $0 : nil }
@@ -25,6 +27,7 @@ final class AreaPicker {
         let mouse = NSEvent.mouseLocation
         (overlays.first { $0.frame.contains(mouse) } ?? overlays.first)?.makeKey()
         NSApp.activate()
+        script.showForEditing()
     }
 
     func select(_ newArea: CaptureArea?) {
@@ -210,6 +213,11 @@ struct AreaToolbar: View {
                 .foregroundStyle(.secondary)
                 .padding(.leading, 6)
             Button("Whole Screen") { picker.selectWholeDisplay(of: screen) }
+            Toggle(isOn: Binding(get: { picker.script.isShown }, set: { picker.script.setShown($0) })) {
+                Label("Script", systemImage: "text.alignleft")
+            }
+            .toggleStyle(.button)
+            .help("Show your script on screen while you record. It isn't in the video.")
             Button("Cancel") { picker.cancel() }
             Button("Record") { picker.confirm() }
                 .buttonStyle(.borderedProminent)
